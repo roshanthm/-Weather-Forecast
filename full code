@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .weather-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        
+        .bg-gradient {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+        
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        
+        .temp-display {
+            font-size: 5rem;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .weather-icon {
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        }
+    </style>
+</head>
+<body class="bg-gradient min-h-screen flex items-center justify-center p-4">
+    <div class="container mx-auto max-w-4xl">
+        <div class="weather-card p-8 text-white">
+            <h1 class="text-4xl font-bold text-center mb-8">Weather Forecast</h1>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Search Section -->
+                <div class="w-full md:w-1/3">
+                    <div class="mb-6">
+                        <label for="location" class="block text-lg font-medium mb-2">Enter Location</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="location" 
+                                placeholder="e.g. London, Paris, New York" 
+                                class="search-input w-full p-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-white placeholder-opacity-70"
+                            >
+                            <button 
+                                id="search-btn" 
+                                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-30 hover:bg-opacity-50 p-2 rounded-lg"
+                            >
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="recent-searches" class="mt-6">
+                        <h3 class="text-lg font-medium mb-2">Recent Searches</h3>
+                        <div id="recent-list" class="space-y-2"></div>
+                    </div>
+                </div>
+                
+                <!-- Weather Display Section -->
+                <div class="w-full md:w-2/3">
+                    <div id="weather-display" class="text-center">
+                        <div class="flex justify-center items-center mb-6">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            <h2 id="location-name" class="text-2xl font-semibold">Search for a location</h2>
+                        </div>
+                        
+                        <div id="current-weather" class="hidden">
+                            <div class="flex flex-col items-center">
+                                <div class="flex items-center justify-center mb-4">
+                                    <img id="weather-icon" src="" alt="Weather Icon" class="weather-icon w-24 h-24">
+                                </div>
+                                <div class="temp-display font-light mb-2">
+                                    <span id="temperature">--</span><span>°C</span>
+                                </div>
+                                <p id="weather-condition" class="text-xl mb-6">--</p>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                                    <div class="bg-white bg-opacity-10 p-3 rounded-lg">
+                                        <i class="fas fa-wind mr-2"></i>
+                                        <span id="wind-speed">-- km/h</span>
+                                    </div>
+                                    <div class="bg-white bg-opacity-10 p-3 rounded-lg">
+                                        <i class="fas fa-tint mr-2"></i>
+                                        <span id="humidity">--%</span>
+                                    </div>
+                                    <div class="bg-white bg-opacity-10 p-3 rounded-lg">
+                                        <i class="fas fa-compress-alt mr-2"></i>
+                                        <span id="pressure">-- hPa</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="loading" class="hidden py-12">
+                            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+                            <p>Loading weather data...</p>
+                        </div>
+                        
+                        <div id="error-message" class="hidden py-12 text-red-200">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-3"></i>
+                            <p>Could not fetch weather data. Please try another location.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-6 text-white text-opacity-70">
+            <p>Data provided by <a href="https://www.weatherapi.com/" class="underline hover:text-opacity-100">WeatherAPI.com</a></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKey = '10a56636e3ad45c6bba135807251708';
+            const searchBtn = document.getElementById('search-btn');
+            const locationInput = document.getElementById('location');
+            const weatherDisplay = document.getElementById('weather-display');
+            const currentWeather = document.getElementById('current-weather');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+            const recentList = document.getElementById('recent-list');
+            
+            let recentSearches = JSON.parse(localStorage.getItem('recentSearches')) || [];
+            
+            // Update recent searches display
+            function updateRecentSearches() {
+                recentList.innerHTML = '';
+                recentSearches.slice(0, 5).forEach(search => {
+                    const searchItem = document.createElement('button');
+                    searchItem.className = 'w-full text-left p-2 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg transition';
+                    searchItem.textContent = search;
+                    searchItem.addEventListener('click', () => {
+                        locationInput.value = search;
+                        fetchWeather(search);
+                    });
+                    recentList.appendChild(searchItem);
+                });
+            }
+            
+            updateRecentSearches();
+            
+            // Fetch weather data
+            function fetchWeather(location) {
+                if (!location) return;
+                
+                currentWeather.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                loading.classList.remove('hidden');
+                
+                fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(location)}&aqi=yes`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Location not found');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayWeather(data);
+                        
+                        // Add to recent searches if not already there
+                        if (!recentSearches.includes(location)) {
+                            recentSearches.unshift(location);
+                            localStorage.setItem('recentSearches', JSON.stringify(recentSearches));
+                            updateRecentSearches();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching weather data:', error);
+                        loading.classList.add('hidden');
+                        errorMessage.classList.remove('hidden');
+                    });
+            }
+            
+            // Display weather data
+            function displayWeather(data) {
+                const location = data.location.name + ', ' + data.location.country;
+                const temp = data.current.temp_c;
+                const condition = data.current.condition.text;
+                const icon = data.current.condition.icon;
+                const wind = data.current.wind_kph;
+                const humidity = data.current.humidity;
+                const pressure = data.current.pressure_mb;
+                
+                document.getElementById('location-name').textContent = location;
+                document.getElementById('temperature').textContent = temp;
+                document.getElementById('weather-condition').textContent = condition;
+                document.getElementById('weather-icon').src = icon.replace('64x64', '128x128');
+                document.getElementById('wind-speed').textContent = `${wind} km/h`;
+                document.getElementById('humidity').textContent = `${humidity}%`;
+                document.getElementById('pressure').textContent = `${pressure} hPa`;
+                
+                loading.classList.add('hidden');
+                currentWeather.classList.remove('hidden');
+            }
+            
+            // Event listeners
+            searchBtn.addEventListener('click', () => {
+                const location = locationInput.value.trim();
+                if (location) {
+                    fetchWeather(location);
+                }
+            });
+            
+            locationInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const location = locationInput.value.trim();
+                    if (location) {
+                        fetchWeather(location);
+                    }
+                }
+            });
+            
+            // Load default location (London) on first visit
+            if (recentSearches.length === 0) {
+                fetchWeather('London');
+            }
+        });
+    </script>
+</body>
+</html>
